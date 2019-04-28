@@ -1,35 +1,44 @@
 package personinformationsystem;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import java.util.List;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
+
 
 /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-
 /**
  *
  * @author Connor
  */
 public class PersonGUI extends javax.swing.JPanel {
 
-     File checkFile;
-     DefaultTableModel model;
+    List<Object> iterator = new ArrayList<>();
+    private static String fileName;
+    static ObjectOutputStream oout;
+    private Person[] thePerson = new Person[15];
+    Person[] writeTable = new Person[90];
+    File checkFile;
+    DefaultTableModel model;
+    ObjectInputStream oin
+            = null;
+
     public PersonGUI() {
         initComponents();
+        model = (DefaultTableModel) jTable1.getModel();
     }
 
     /**
@@ -111,7 +120,8 @@ public class PersonGUI extends javax.swing.JPanel {
         jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel1.setText("SPIS9000");
 
-        importFile.setText("table.txt");
+        importFile.setText("people.dat");
+        importFile.setToolTipText("");
         importFile.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 importFileActionPerformed(evt);
@@ -165,37 +175,25 @@ public class PersonGUI extends javax.swing.JPanel {
         );
     }// </editor-fold>//GEN-END:initComponents
 
+
     private void uploadActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_uploadActionPerformed
-       try {
-           
-           checkFile = new File(importFile.getText());
-           if(!checkFile.exists()){
-                   checkFile.createNewFile();
-               }
-           if(jTable1.getRowCount() > 0){
-               model.setRowCount(0);
-           }
-           
-           
-           
-            FileReader fr = new FileReader(checkFile);
-            BufferedReader br = new BufferedReader(fr);
-            
-            model = (DefaultTableModel)jTable1.getModel();
-            Object[] lines = br.lines().toArray();
-            
-            for(int i = 0; i < lines.length; i++){
-                String[] row = lines[i].toString().split(" ");
-                model.addRow(row);
+        fileName = importFile.getText();
+        checkFile = new File(fileName);
+        if (!checkFile.exists()) {
+            try {
+                checkFile.createNewFile();
+            } catch (IOException ex) {
+                System.out.println(ex.toString());
             }
-       
-            br.close();
-            fr.close();
-            JOptionPane.showMessageDialog(null, "Data Successfully Imported");
-    }
-    catch (Exception e){
-      System.out.println(e.toString());
-    }
+        }
+        if (jTable1.getRowCount() > 0) {
+            model.setRowCount(0);
+        }
+
+        importPeople();
+        JOptionPane.showMessageDialog(null, "Data Successfully Imported");
+
+
     }//GEN-LAST:event_uploadActionPerformed
 
     private void importFileActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_importFileActionPerformed
@@ -203,44 +201,36 @@ public class PersonGUI extends javax.swing.JPanel {
     }//GEN-LAST:event_importFileActionPerformed
 
     private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
+
+        model.fireTableDataChanged();
+        setPeople();
         try {
-            
-          
-            FileWriter fw = new FileWriter(checkFile);
-            BufferedWriter bw = new BufferedWriter(fw);
-            
-            for(int i = 0; i < jTable1.getRowCount(); i++){//rows
-                for(int j = 0; j < jTable1.getColumnCount(); j++){//columns
-                    model.setValueAt(jTable1.getValueAt(i, j).toString(), i, j);
-                    bw.write(jTable1.getValueAt(i, j).toString()+" ");
-                }
-                bw.newLine();
+            oout = new ObjectOutputStream(new FileOutputStream(fileName));
+            for (Person p : writeTable) {
+                oout.writeObject(p);
             }
-            
-            bw.close();
-            fw.close();
-            JOptionPane.showMessageDialog(null, "Data Successfully Exported");
-    }
-    catch (Exception e){
-      System.out.println(e.toString());
-    }
+            oout.close();
+        } catch (IOException e) {
+            System.out.println(e.toString());
+        }
+
+        JOptionPane.showMessageDialog(null, "Data Successfully Exported");
     }//GEN-LAST:event_jButton4ActionPerformed
 
     private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton5ActionPerformed
-       model.addRow(new Object[]{"", "", ""});
+        model.addRow(new Object[]{"", "", ""});
     }//GEN-LAST:event_jButton5ActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-         int i = jTable1.getSelectedRow();
-                if(i >= 0){
-                    // remove a row from jtable
-                    model.removeRow(i);
-                }
-                else{
-                    System.out.println("Delete Error");
-                }
-    }//GEN-LAST:event_jButton1ActionPerformed
 
+        int i = jTable1.getSelectedRow();
+        if (i >= 0) {
+            // remove a row from jtable
+            model.removeRow(i);
+        } else {
+            System.out.println("Delete Error");
+        }
+    }//GEN-LAST:event_jButton1ActionPerformed
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JTextField importFile;
@@ -253,4 +243,56 @@ public class PersonGUI extends javax.swing.JPanel {
     private javax.swing.JTable jTable1;
     private javax.swing.JButton upload;
     // End of variables declaration//GEN-END:variables
+
+    private void importPeople() {
+
+        try {
+
+            try {
+                oin = new ObjectInputStream(new FileInputStream(fileName));
+            } catch (IOException ex) {
+                Logger.getLogger(PersonGUI.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            Object buffer;
+            buffer = null;
+
+            while ((buffer = oin.readObject()) != null) {
+                if (buffer instanceof RegisteredPerson) {
+                    
+                    RegisteredPerson r = (RegisteredPerson) buffer;
+                    model.addRow(new Object[]{r.getFirstName(),
+                        r.getLastName(), r.getGovID()});
+                } else {
+                    System.err.println(2);
+                    Person p = (Person) buffer;
+                    model.addRow(new Object[]{p.getFirstName(),
+                        p.getLastName()}); 
+                    
+                }
+                } 
+            oin.close();
+        } catch (IOException | ClassNotFoundException ex) {
+            Logger.getLogger(PersonGUI.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+
+    private void setPeople() {
+
+        for (int i = 0; i < model.getRowCount(); i++) {
+            if (jTable1.getValueAt(i, 0) == "" || jTable1.getValueAt(i, 1) == null) {
+                JOptionPane.showMessageDialog(null, "Delete Rows with No Name or Add a Name, before saving");
+            }
+
+            if (jTable1.getValueAt(i, 2) == null) {
+                writeTable[i] = new Person((String) model.getValueAt(i, 0), (String) model.getValueAt(i, 1));
+            } else {
+                writeTable[i] = new RegisteredPerson((String) model.getValueAt(i, 0), (String) model.getValueAt(i, 1),
+                        (String) model.getValueAt(i, 2));
+            }
+        }
+
+    }
+
 }

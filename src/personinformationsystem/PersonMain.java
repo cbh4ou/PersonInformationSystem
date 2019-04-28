@@ -32,7 +32,7 @@ public class PersonMain extends JFrame {
         setResizable(false);
         pack();
         
-        setTitle("Calculator");
+        setTitle("PIS");
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
